@@ -1,0 +1,31 @@
+{
+  "name": "switch-framework-backend",
+  "version": "0.1.0",
+  "description": "Backend utilities and middleware for Switch Framework",
+  "author":"Switcherfaiz",
+  "github": "https://github.com/Switcherfaiz/switch-framework-backend",
+  "main": "./index.js",
+  "type": "commonjs",
+  "files": [
+    "index.js",
+    "middleware.js",
+    "security"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./middleware": "./middleware.js",
+    "./middleware.js": "./middleware.js",
+    "./security/middleware": "./security/middleware.js",
+    "./security/middleware.js": "./security/middleware.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "switch-framework",
+    "express",
+    "switch-framework-backend",
+    "middleware"
+  ],
+  "license": "MIT"
+}
