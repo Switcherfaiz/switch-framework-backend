@@ -1,5 +1,4 @@
 'use strict';
 
-module.exports = {
-  ...require('./middleware.js')
-};
+const createApp = require('./express.js');
+module.exports = createApp;
