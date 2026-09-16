@@ -1,6 +1,6 @@
 {
   "name": "switch-framework-backend",
-  "version": "0.2.1",
+  "version": "0.2.9",
   "description": "Backend utilities and middleware for Switch Framework",
   "author":"Switcherfaiz",
   "github": "https://github.com/Switcherfaiz/switch-framework-backend",

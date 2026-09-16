@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
+const http = require('node:http');
 const express = require('express');
 const session = require('express-session');
 const { checkRestrict } = require('./security/middleware.js');
@@ -36,6 +37,9 @@ function config(options = {}) {
   if (options.staticRoot != null) serverConfig.staticRoot = options.staticRoot;
   if (options.session && typeof options.session === 'object') {
     serverConfig.session = { ...serverConfig.session, ...options.session };
+  }
+  if (typeof options.onHttpServer === 'function') {
+    serverConfig.onHttpServer = options.onHttpServer;
   }
 }
 
@@ -133,7 +137,11 @@ function createApp() {
         serveIndex(req, res, indexPath);
       });
 
-      server.listen(serverConfig.PORT, () => {
+      const httpServer = http.createServer(server);
+      if (typeof serverConfig.onHttpServer === 'function') {
+        serverConfig.onHttpServer(httpServer);
+      }
+      httpServer.listen(serverConfig.PORT, () => {
         console.log(`Switch Framework app running at http://localhost:${serverConfig.PORT}`);
       });
     }
