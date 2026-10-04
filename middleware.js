@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = {
-  ...require('./security/middleware.js')
+  ...require('./security/middleware.js'),
+  ...require('./imports.js')
 };

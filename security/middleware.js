@@ -13,12 +13,10 @@ function checkRestrict(config) {
       const pathValue = req.path === '/' ? '/dashboard' : req.path;
       const user = req.session && req.session.user ? req.session.user : null;
 
-      // Allow public paths
-      if (publicPaths && publicPaths.some(p => pathValue.startsWith(p))) {
+      if (publicPaths && publicPaths.some((p) => pathValue.startsWith(p))) {
         return next();
       }
 
-      // Find matching rule
       for (const rule of rules) {
         if (!rule) continue;
 
@@ -41,7 +39,7 @@ function checkRestrict(config) {
         return next();
       }
 
-      next(); // no rule → allow
+      next();
     } catch (err) {
       next(err);
     }

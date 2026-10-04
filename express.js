@@ -6,18 +6,17 @@ const http = require('node:http');
 const express = require('express');
 const session = require('express-session');
 const { checkRestrict } = require('./security/middleware.js');
-
-const DEFAULT_IMPORT_MAP = {
-  imports: {
-    'switch-framework': '/switch-framework/index.js',
-    'switch-framework/router': '/switch-framework/router/index.js',
-    'switch-framework/themes': '/switch-framework/themes/index.js'
-  }
-};
+const {
+  DEFAULT_IMPORT_MAP,
+  buildImportPlan,
+  denySensitivePaths,
+  addNpmRoutes
+} = require('./imports.js');
 
 let serverConfig = {
   PORT: 3000,
   staticRoot: null,
+  imports: null,
   session: {
     secret: process.env.SESSION_SECRET || 'dev-secret',
     resave: false,
@@ -30,11 +29,13 @@ let serverConfig = {
  * @param {object} options - Configuration
  * @param {number} [options.PORT] - Server port (default: 3000)
  * @param {string} options.staticRoot - Path to index.html and static files (e.g. __dirname)
+ * @param {string[]|object} [options.imports] - Extra browser packages (merged with package.json switchFramework.imports)
  * @param {object} [options.session] - express-session config
  */
 function config(options = {}) {
   if (options.PORT != null) serverConfig.PORT = Number(options.PORT);
   if (options.staticRoot != null) serverConfig.staticRoot = options.staticRoot;
+  if (options.imports != null) serverConfig.imports = options.imports;
   if (options.session && typeof options.session === 'object') {
     serverConfig.session = { ...serverConfig.session, ...options.session };
   }
@@ -55,9 +56,9 @@ function injectImportMap(html, importMap) {
   return script + '\n' + html;
 }
 
-function serveIndex(req, res, indexPath) {
+function serveIndex(req, res, indexPath, importMap) {
   const raw = fs.readFileSync(indexPath, 'utf8');
-  const html = injectImportMap(raw);
+  const html = injectImportMap(raw, importMap);
   res.type('text/html').send(html);
 }
 
@@ -103,19 +104,22 @@ function createApp() {
     initServer(callback) {
       const staticRoot = serverConfig.staticRoot || process.cwd();
       const indexPath = path.join(staticRoot, 'index.html');
+      const plan = buildImportPlan(staticRoot, serverConfig.imports);
 
       const server = express();
 
       server.use(express.json({ limit: '25mb' }));
       server.use(session(serverConfig.session));
+      server.use(denySensitivePaths);
 
       addSwitchFrameworkRoutes(server);
+      addNpmRoutes(server, plan);
 
       callback(server);
 
       server.use((req, res, next) => {
         if (req.path === '/' || req.path === '/index.html') {
-          return serveIndex(req, res, indexPath);
+          return serveIndex(req, res, indexPath, plan.importMap);
         }
         next();
       });
@@ -124,7 +128,7 @@ function createApp() {
           res.setHeader('Content-Type', 'application/javascript');
         }
       };
-      server.use(express.static(staticRoot, { setHeaders: jsMime }));
+      server.use(express.static(staticRoot, { setHeaders: jsMime, dotfiles: 'ignore', index: false }));
       server.get('*', (req, res) => {
         if (req.path && req.path.startsWith('/api/')) {
           return res.status(404).json({ error: 'Not found' });
@@ -134,7 +138,7 @@ function createApp() {
         if (staticExts.includes(ext)) {
           return res.status(404).send('Not found');
         }
-        serveIndex(req, res, indexPath);
+        serveIndex(req, res, indexPath, plan.importMap);
       });
 
       const httpServer = http.createServer(server);
@@ -142,7 +146,8 @@ function createApp() {
         serverConfig.onHttpServer(httpServer);
       }
       httpServer.listen(serverConfig.PORT, () => {
-        console.log(`Switch Framework app running at http://localhost:${serverConfig.PORT}`);
+        const extras = plan.names.length ? ` · npm ${plan.names.join(', ')}` : '';
+        console.log(`Switch Framework app running at http://localhost:${serverConfig.PORT}${extras}`);
       });
     }
   };

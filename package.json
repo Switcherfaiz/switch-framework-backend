@@ -1,8 +1,8 @@
 {
   "name": "switch-framework-backend",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Backend utilities and middleware for Switch Framework",
-  "author":"Switcherfaiz",
+  "author": "Switcherfaiz",
   "github": "https://github.com/Switcherfaiz/switch-framework-backend",
   "main": "./index.js",
   "type": "commonjs",
@@ -10,6 +10,7 @@
     "index.js",
     "middleware.js",
     "express.js",
+    "imports.js",
     "security"
   ],
   "exports": {
@@ -22,6 +23,8 @@
     "./middleware.js": "./middleware.js",
     "./express": "./express.js",
     "./express.js": "./express.js",
+    "./imports": "./imports.js",
+    "./imports.js": "./imports.js",
     "./security/middleware": "./security/middleware.js",
     "./security/middleware.js": "./security/middleware.js"
   },
