@@ -107,6 +107,7 @@ function createApp() {
       const plan = buildImportPlan(staticRoot, serverConfig.imports);
 
       const server = express();
+      server.disable('x-powered-by');
 
       server.use(express.json({ limit: '25mb' }));
       server.use(session(serverConfig.session));
