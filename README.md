@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Switcherfaiz/switch-framework-backend/master/logo.svg" alt="Switch Framework" width="180" />
+</p>
+
 # switch-framework-backend
 
 Status: Under maintenance. Documentation is not ready yet.
