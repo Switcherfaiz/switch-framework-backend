@@ -4,13 +4,9 @@
 
 # switch-framework-backend
 
-Status: Under maintenance. Documentation is not ready yet.
+The Node server for Switch Framework apps. It serves the runtime, builds the import map, and applies the `/npm` allowlist so listed ESM packages load in the browser.
 
-switch-framework-backend is a collection of backend utilities and middleware intended to support apps built with `switch-framework`.
-
-It focuses on the server-side pieces that help your Switch Framework apps work together as a cohesive framework (for example, Express middleware and common backend helpers).
-
-## Install
+Works with `switch-framework` for web and Electron. Read the docs: [switch-framework-docs](https://github.com/Switcherfaiz/switch-framework-docs)
 
 ```bash
 npm i switch-framework-backend
