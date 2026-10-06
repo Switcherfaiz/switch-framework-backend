@@ -11,7 +11,8 @@
     "middleware.js",
     "express.js",
     "imports.js",
-    "security"
+    "security",
+    "logo.svg"
   ],
   "exports": {
     ".": {
@@ -39,7 +40,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
-    "express-session": "^1.18.1"
+    "express": "^4.22.3",
+    "express-session": "^1.19.0"
   }
 }

@@ -3,6 +3,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
+const { createRequire } = require('node:module');
 const express = require('express');
 const session = require('express-session');
 const { checkRestrict } = require('./security/middleware.js');
@@ -10,7 +11,8 @@ const {
   DEFAULT_IMPORT_MAP,
   buildImportPlan,
   denySensitivePaths,
-  addNpmRoutes
+  addNpmRoutes,
+  isDevOverlayEnabled
 } = require('./imports.js');
 
 let serverConfig = {
@@ -44,21 +46,22 @@ function config(options = {}) {
   }
 }
 
-function injectImportMap(html, importMap) {
+function injectHeadScripts(html, importMap, staticRoot) {
   const map = importMap || DEFAULT_IMPORT_MAP;
-  const script = `<script type="importmap">${JSON.stringify(map)}</script>`;
+  const overlayOn = isDevOverlayEnabled(staticRoot);
+  const scripts = `<script>window.__SWITCH_DEV__=${overlayOn ? 'true' : 'false'};</script>\n  <script type="importmap">${JSON.stringify(map)}</script>`;
   if (html.includes('<head>')) {
-    return html.replace('<head>', `<head>\n  ${script}`);
+    return html.replace('<head>', `<head>\n  ${scripts}`);
   }
   if (html.includes('<body>')) {
-    return html.replace('<body>', `<body>\n  ${script}`);
+    return html.replace('<body>', `<body>\n  ${scripts}`);
   }
-  return script + '\n' + html;
+  return scripts + '\n' + html;
 }
 
-function serveIndex(req, res, indexPath, importMap) {
+function serveIndex(req, res, indexPath, importMap, staticRoot) {
   const raw = fs.readFileSync(indexPath, 'utf8');
-  const html = injectImportMap(raw, importMap);
+  const html = injectHeadScripts(raw, importMap, staticRoot || path.dirname(indexPath));
   res.type('text/html').send(html);
 }
 
@@ -74,15 +77,15 @@ function addSwitchFrameworkRoutes(server) {
   server.get('/switch-framework', (req, res) => {
     res.type('application/javascript').sendFile(path.join(packageRoot, 'index.js'));
   });
-  server.get('/switch-framework/router', (req, res) => {
-    res.type('application/javascript').sendFile(path.join(packageRoot, 'router', 'index.js'));
-  });
   server.get('/switch-framework/themes', (req, res) => {
     res.type('application/javascript').sendFile(path.join(packageRoot, 'themes', 'index.js'));
   });
+  server.get('/switch-framework/overlay', (req, res) => {
+    res.type('application/javascript').sendFile(path.join(packageRoot, 'overlay', 'index.js'));
+  });
   server.use('/switch-framework', express.static(packageRoot, { setHeaders: jsMime }));
 
-  const frameworkPrefixes = ['/switch-components', '/router', '/registers', '/state-managers', '/helpers'];
+  const frameworkPrefixes = ['/switch-components', '/router', '/registers', '/state-managers', '/helpers', '/overlay'];
   const frameworkFiles = ['/registerScreens.js', '/staticStateRegistry.js'];
   server.use((req, res, next) => {
     const p = req.path || '';
@@ -93,6 +96,56 @@ function addSwitchFrameworkRoutes(server) {
     }
     next();
   });
+}
+
+function addSwitchIconsRoutes(server, staticRoot) {
+  let packageRoot = null;
+  try {
+    const appRequire = createRequire(path.join(staticRoot || process.cwd(), 'package.json'));
+    packageRoot = path.dirname(appRequire.resolve('switch-framework-icons/package.json'));
+  } catch {
+    try {
+      packageRoot = path.dirname(require.resolve('switch-framework-icons/package.json'));
+    } catch {
+      return;
+    }
+  }
+
+  server.get('/switch-framework-icons', (req, res) => {
+    res.type('application/javascript').sendFile(path.join(packageRoot, 'index.js'));
+  });
+  server.get('/switch-framework-icons/style.css', (req, res) => {
+    res.type('text/css').sendFile(path.join(packageRoot, 'style.css'));
+  });
+  server.use('/switch-framework-icons', express.static(packageRoot));
+}
+
+function addSwitchRouterRoutes(server, staticRoot) {
+  let packageRoot = null;
+  try {
+    const appRequire = createRequire(path.join(staticRoot || process.cwd(), 'package.json'));
+    packageRoot = path.dirname(appRequire.resolve('switch-framework-router/package.json'));
+  } catch {
+    try {
+      packageRoot = path.dirname(require.resolve('switch-framework-router/package.json'));
+    } catch {
+      return;
+    }
+  }
+
+  const jsMime = (res, filePath) => {
+    if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  };
+
+  server.get('/switch-framework-router', (req, res) => {
+    res.type('application/javascript').sendFile(path.join(packageRoot, 'index.js'));
+  });
+  server.get('/switch-framework/router', (req, res) => {
+    res.type('application/javascript').sendFile(path.join(packageRoot, 'index.js'));
+  });
+  server.use('/switch-framework-router', express.static(packageRoot, { setHeaders: jsMime }));
 }
 
 /**
@@ -107,19 +160,22 @@ function createApp() {
       const plan = buildImportPlan(staticRoot, serverConfig.imports);
 
       const server = express();
+      server.disable('x-powered-by');
 
       server.use(express.json({ limit: '25mb' }));
       server.use(session(serverConfig.session));
       server.use(denySensitivePaths);
 
       addSwitchFrameworkRoutes(server);
+      addSwitchIconsRoutes(server, staticRoot);
+      addSwitchRouterRoutes(server, staticRoot);
       addNpmRoutes(server, plan);
 
       callback(server);
 
       server.use((req, res, next) => {
         if (req.path === '/' || req.path === '/index.html') {
-          return serveIndex(req, res, indexPath, plan.importMap);
+          return serveIndex(req, res, indexPath, plan.importMap, staticRoot);
         }
         next();
       });
@@ -138,7 +194,7 @@ function createApp() {
         if (staticExts.includes(ext)) {
           return res.status(404).send('Not found');
         }
-        serveIndex(req, res, indexPath, plan.importMap);
+        serveIndex(req, res, indexPath, plan.importMap, staticRoot);
       });
 
       const httpServer = http.createServer(server);

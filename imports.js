@@ -4,16 +4,30 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createRequire } = require('node:module');
 
-const ALLOWED_EXT = new Set(['.js', '.mjs', '.css', '.json', '.svg', '.woff2']);
+const ALLOWED_EXT = new Set(['.js', '.mjs', '.css', '.json', '.svg', '.woff', '.woff2', '.ttf', '.eot']);
 const MAX_DEP_DEPTH = 3;
-const FRAMEWORK_NAMES = new Set(['switch-framework', 'switch-framework/router', 'switch-framework/themes']);
+const FRAMEWORK_NAMES = new Set([
+  'switch-framework',
+  'switch-framework/router',
+  'switch-framework/themes',
+  'switch-framework/overlay',
+  'switch-framework-icons',
+  'switch-framework-icons/style.css',
+  'switch-framework-router'
+]);
 
 const DEFAULT_IMPORT_MAP = {
   imports: {
     'switch-framework': '/switch-framework/index.js',
-    'switch-framework/router': '/switch-framework/router/index.js',
+    'switch-framework/router': '/switch-framework-router/index.js',
     'switch-framework/themes': '/switch-framework/themes/index.js',
-    'switch-framework/': '/switch-framework/'
+    'switch-framework/overlay': '/switch-framework/overlay/index.js',
+    'switch-framework/': '/switch-framework/',
+    'switch-framework-icons': '/switch-framework-icons/index.js',
+    'switch-framework-icons/style.css': '/switch-framework-icons/style.css',
+    'switch-framework-icons/': '/switch-framework-icons/',
+    'switch-framework-router': '/switch-framework-router/index.js',
+    'switch-framework-router/': '/switch-framework-router/'
   }
 };
 
@@ -55,6 +69,12 @@ function readAppPackage(staticRoot) {
   } catch {
     return {};
   }
+}
+
+function isDevOverlayEnabled(staticRoot) {
+  const pkg = readAppPackage(staticRoot);
+  const flag = pkg.switchFramework && pkg.switchFramework.devOverlay;
+  return flag !== false;
 }
 
 function listedImportNames(value) {
@@ -272,5 +292,6 @@ module.exports = {
   denySensitivePaths,
   serveNpm,
   addNpmRoutes,
-  resolvePackage
+  resolvePackage,
+  isDevOverlayEnabled
 };
